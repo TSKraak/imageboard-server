@@ -1,8 +1,14 @@
 const express = require("express");
 const app = express();
 const port = 4000;
+const jsonParser = express.json();
+const userRouter = require("./routers/user");
+const imageRouter = require("./routers/image");
 
-app.use(express.json()); // body-parsers
+app.use(jsonParser);
+
+app.use("/users", userRouter);
+app.use("/images", imageRouter);
 
 function onListen() {
   console.log(`Listening on :${port}`);
