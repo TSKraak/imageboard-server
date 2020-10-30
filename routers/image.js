@@ -1,56 +1,42 @@
 const express = require("express");
 const { Router } = express;
 const Image = require("../models").image;
-const { toJWT, toData } = require("../auth/jwt");
+// const { toJWT, toData } = require("../auth/jwt");
+const authMiddleware = require("../auth/middleware");
 
 const router = new Router();
 
+// Get all images without authorization
 router.get("/", async (req, res, next) => {
   const limit = Math.min(req.query.limit || 25, 100);
   const offset = req.query.offset || 0;
 
-  Image.findAndCountAll({ limit, offset })
-    .then((result) => res.send({ images: result.rows, total: result.count }))
-    .catch((error) => next(error));
   try {
-    const images = await Image.findAll();
-    if (!images) {
-      return res.status(400).json("No images found.");
+    const images = await Image.findAndCountAll({ limit, offset });
+    // console.log("IMAGES", images);
+    if (images.rows.length === 0) {
+      return res.status(404).json("No images found.");
     }
-    res.json(images.map((image) => image));
+    res.send({ images: images.rows, total: images.count });
   } catch (error) {
     next(error);
   }
 });
 
-router.get("/auth/messy", async (req, res, next) => {
+// Get all images THROUGH authorization
+router.get("/auth", authMiddleware, async (req, res, next) => {
   const limit = Math.min(req.query.limit || 25, 100);
   const offset = req.query.offset || 0;
 
-  Image.findAndCountAll({ limit, offset })
-    .then((result) => res.send({ images: result.rows, total: result.count }))
-    .catch((error) => next(error));
-
-  const auth =
-    req.headers.authorization && req.headers.authorization.split(" ");
-  if (auth && auth[0] === "Bearer" && auth[1]) {
-    try {
-      const data = toData(auth[1]);
-    } catch (e) {
-      res.status(400).send("Invalid JWT token");
+  try {
+    const images = await Image.findAndCountAll({ limit, offset });
+    // console.log("IMAGES", images);
+    if (images.rows.length === 0) {
+      return res.status(404).json("No images found.");
     }
-    const allImages = await Image.findAll();
-    res.json(allImages);
-  } else {
-    try {
-      const images = await Image.findAll();
-      if (!images) {
-        return res.status(400).json("No images found.");
-      }
-      res.json(images.map((image) => image));
-    } catch (error) {
-      next(error);
-    }
+    res.send({ images: images.rows, total: images.count });
+  } catch (error) {
+    next(error);
   }
 });
 
